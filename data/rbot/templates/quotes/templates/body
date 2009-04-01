@@ -1,0 +1,6 @@
+            <div id="%%id%%" class="quote">
+                <div class="timestamp">%%timestamp%%</div>
+                <div class="author">%%author%%</div>
+                <div class="channel">%%channel%%</div>
+                <div class="quote">%%quote%%</div>
+            </div>
