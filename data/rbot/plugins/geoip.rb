@@ -44,6 +44,26 @@ module ::GeoIP
     return YAML::load(yaml)
   end
 
+  def self.blogama(ip)
+    url = "http://blogama.org/ip_query.php?output=xml&ip="
+    debug "Requesting #{url+ip}"
+    xml = Irc::Utils.bot.httputil.get(url+ip)
+
+    if xml
+      obj = REXML::Document.new(xml)
+      debug "Found #{obj}"
+      newobj = {
+        :country => obj.elements["Response"].elements["CountryName"].text,
+        :city => obj.elements["Response"].elements["City"].text,
+        :region => obj.elements["Response"].elements["RegionCode"].text,
+      }
+      debug "Returning #{newobj}"
+      return newobj
+    else
+      raise InvalidHostError
+    end
+  end
+
   def self.resolve(hostname, api)
     raise InvalidHostError unless valid_host?(hostname)
 
@@ -54,6 +74,7 @@ module ::GeoIP
     end
 
     jump_table = {
+        "blogama" => Proc.new { |ip| blogama(ip) },
         "kapsi" => Proc.new { |ip| kapsi(ip) },
         "geoiptool" => Proc.new { |ip| geoiptool(ip) },
     }
@@ -85,7 +106,7 @@ end
 
 class GeoIpPlugin < Plugin
   Config.register Config::ArrayValue.new('geoip.sources',
-      :default => [ "kapsi", "geoiptool" ],
+      :default => [ "blogama", "kapsi", "geoiptool" ],
       :desc => "Which API to use for lookups. Supported values: blogama, kapsi, geoiptool")
 
   def help(plugin, topic="")
