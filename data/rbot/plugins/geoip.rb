@@ -11,40 +11,56 @@
 
 module ::GeoIP
   class InvalidHostError < RuntimeError; end
+  class BadAPIError < RuntimeError; end
 
-  GEO_IP_PRIMARY   = "http://lakka.kapsi.fi:40086/lookup.yaml?host="
-  GEO_IP_SECONDARY = "http://www.geoiptool.com/en/?IP="
   HOST_NAME_REGEX  = /^[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.[a-z]{2,4}/i
-
-  REGEX  = {
-    :country => %r{Country:.*?<a href=".*?" target="_blank"> (.*?)</a>}m,
-    :region  => %r{Region:.*?<a href=".*?" target="_blank">(.*?)</a>}m,
-    :city    => %r{City:.*?<td align="left" class="arial_bold">(.*?)</td>}m,
-    :lat     => %r{Latitude:.*?<td align="left" class="arial_bold">(.*?)</td>}m,
-    :lon     => %r{Longitude:.*?<td align="left" class="arial_bold">(.*?)</td>}m
-  }
 
   def self.valid_host?(hostname)
     hostname =~ HOST_NAME_REGEX ||
     hostname =~ Resolv::IPv4::Regex && (hostname.split(".").map { |e| e.to_i }.max <= 255)
   end
 
-  def self.resolve(hostname)
+  def self.geoiptool(ip)
+    url = "http://www.geoiptool.com/en/?IP="
+    regexes  = {
+      :country => %r{Country:.*?<a href=".*?" target="_blank"> (.*?)</a>}m,
+      :region  => %r{Region:.*?<a href=".*?" target="_blank">(.*?)</a>}m,
+      :city    => %r{City:.*?<td align="left" class="arial_bold">(.*?)</td>}m,
+      :lat     => %r{Latitude:.*?<td align="left" class="arial_bold">(.*?)</td>}m,
+      :lon     => %r{Longitude:.*?<td align="left" class="arial_bold">(.*?)</td>}m
+    }
+    res = {}
+    raw = Irc::Utils.bot.httputil.get_response(url+ip)
+    raw = raw.decompress_body(raw.raw_body)
+
+    regexes.each { |key, regex| res[key] = Iconv.conv('utf-8', 'ISO-8859-1', raw.scan(regex).to_s) }
+
+    return res
+  end
+
+  def self.kapsi(ip)
+    url = "http://lakka.kapsi.fi:40086/lookup.yaml?host="
+    yaml = Irc::Utils.bot.httputil.get(url+ip)
+    return YAML::load(yaml)
+  end
+
+  def self.resolve(hostname, api)
     raise InvalidHostError unless valid_host?(hostname)
 
-    yaml = Irc::Utils.bot.httputil.get(GEO_IP_PRIMARY+hostname)
-
-    if yaml
-      return YAML::load(yaml)
-    else
-      res = {}
-      raw = Irc::Utils.bot.httputil.get_response(GEO_IP_SECONDARY+hostname)
-      raw = raw.decompress_body(raw.raw_body)
-
-      REGEX.each { |key, regex| res[key] = Iconv.conv('utf-8', 'ISO-8859-1', raw.scan(regex).to_s) }
-
-      return res
+    begin
+      ip = Resolv.getaddress(hostname)
+    rescue Resolv::ResolvError
+      raise InvalidHostError
     end
+
+    jump_table = {
+        "kapsi" => Proc.new { |ip| kapsi(ip) },
+        "geoiptool" => Proc.new { |ip| geoiptool(ip) },
+    }
+
+    raise BadAPIError unless jump_table.key?(api)
+
+    return jump_table[api].call(ip)
   end
 end
 
@@ -68,6 +84,10 @@ class Stack
 end
 
 class GeoIpPlugin < Plugin
+  Config.register Config::ArrayValue.new('geoip.sources',
+      :default => [ "kapsi", "geoiptool" ],
+      :desc => "Which API to use for lookups. Supported values: blogama, kapsi, geoiptool")
+
   def help(plugin, topic="")
     "geoip [<user|hostname|ip>] => returns the geographic location of whichever has been given -- note: user can be anyone on the network"
   end
@@ -130,12 +150,23 @@ class GeoIpPlugin < Plugin
   def host2output(host, nick=nil)
     return "127.0.0.1 could not be res.. wait, what?" if host == "127.0.0.1"
 
+    geo = {:country => ""}
     begin
-      geo = GeoIP::resolve(host)
-
-      raise if geo[:country].empty?
+      apis = @bot.config['geoip.sources']
+      apis.compact.each { |api|
+        geo = GeoIP::resolve(host, api)
+        if geo[:country] != ""
+          break
+        end
+      }
     rescue GeoIP::InvalidHostError, RuntimeError
-      return _("#{nick ? "#{nick}'s location" : host} could not be resolved")
+      if nick
+        return _("#{nick}'s location could not be resolved")
+      else
+        return _("#{host} could not be resolved")
+      end
+    rescue GeoIP::BadAPIError
+      return _("The owner configured me to use an API that doesn't exist, bug them!")
     end
 
     res = _("%{thing} is #{nick ? "from" : "located in"}") % {
