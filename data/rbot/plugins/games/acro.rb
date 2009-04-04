@@ -113,13 +113,6 @@ class AcroPlugin < Plugin
             m.reply("I'm currently playing in #{@channel}, come join us!")
             return
         end
-        ourIndex = @bot.server.channels.names.index(m.channel.name)
-        currentGame = @bot.server.channels[ourIndex].game
-        if currentGame != nil
-            m.reply("We're currently playing #{currentGame} here!")
-            return
-        end
-        @bot.server.channels[ourIndex].game = "acro"
         @playing = true
         @channel = m.channel.name
         @roundsLeft = params[:roundCount].to_i
@@ -287,8 +280,6 @@ class AcroPlugin < Plugin
         @playing = false
         @timers.each { |t| @bot.timer.remove(t) }
         @timers.clear
-        ourIndex = @bot.server.channels.names.index(@channel)
-        @bot.server.channels[ourIndex].game = nil
         @channel = ""
     end
 
