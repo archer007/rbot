@@ -37,14 +37,14 @@ class RoulettePlugin < Plugin
     if @registry.has_key?("player " + m.sourcenick)
       playerdata = @registry["player " + m.sourcenick]
     else
-      playerdata = RouletteHistory.new(0,0,0,0,0)
+      playerdata = RouletteHistory.new(0,0,0,0,0,0)
     end
 
     totals = nil
     if @registry.has_key?("totals")
       totals = @registry["totals"]
     else
-      totals = RouletteHistory.new(0,0,0,0,0)
+      totals = RouletteHistory.new(0,0,0,0,0,0)
     end
 
     if @last == m.sourcenick and not @bot.config['roulette.twice_in_a_row']
@@ -65,7 +65,6 @@ class RoulettePlugin < Plugin
     if shot
       m.reply "#{m.sourcenick}: chamber #{chamberNo} of 6 => *BANG*"
       playerdata.deaths += 1
-      playerdata.points += 2**chamberNo
       totals.deaths += 1
       @players.each {|plyr|
         next if plyr == m.sourcenick
@@ -79,8 +78,9 @@ class RoulettePlugin < Plugin
       @last = ''
       @bot.kick(m.replyto, m.sourcenick, "*BANG*") if @bot.config['roulette.kick']
     else
-      m.reply "#{m.sourcenick}: chamber #{6 - @chambers.length} of 6 => +click+"
+      m.reply "#{m.sourcenick}: chamber #{chamberNo} of 6 => +click+"
       playerdata.misses += 1
+      playerdata.points += 2**chamberNo
       totals.misses += 1
     end
 
@@ -108,7 +108,7 @@ class RoulettePlugin < Plugin
     if @registry.has_key?("totals")
       totals = @registry["totals"]
     else
-      totals = RouletteHistory.new(0,0,0,0,0)
+      totals = RouletteHistory.new(0,0,0,0,0,0)
     end
 
     @players.each {|plyr|
@@ -224,8 +224,9 @@ class RoulettePlugin < Plugin
     fool = m.sourcenick
     tmpKey = params[:key].to_s
     targetKey = tmpKey.to_sym
-    m.reply("Checking out the #{params[:key].to_s} HoF...")
+    m.reply("Checking out the #{tmpKey} HoF...")
     tmp = @registry.to_hash
+    tmp.delete("totals")
     sorted = tmp.sort { |a,b| b[1][targetKey] <=> a[1][targetKey] }
 
     winnersLeft = 5
