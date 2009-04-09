@@ -144,7 +144,7 @@ class QuotePlugin < Plugin
         }
         
         quotes.compact.each{ |q|
-          bodySubs = { "%%timestamp%%" => CGI.escapeHTML(q.date), 
+          bodySubs = { "%%timestamp%%" => q.date, 
                               "%%id%%" => CGI.escapeHTML(q.num.to_s),
                           "%%author%%" => CGI.escapeHTML(q.source[0, q.source.index("!")]),
                          "%%channel%%" => CGI.escapeHTML(channel),
