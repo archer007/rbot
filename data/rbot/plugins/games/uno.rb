@@ -377,7 +377,7 @@ class UnoGame
     shorts = cards.gsub(/\s+/,'').match(/^(?:([rbgy]\+?\d){1,2}|([rbgy][rs])|(w(?:\+4)?)([rbgy])?)$/).to_a
     debug shorts.inspect
     if shorts.empty?
-      announce _("what cards were that again?")
+      announce _("Why not play a real card?")
       return
     end
     full = shorts[0]
