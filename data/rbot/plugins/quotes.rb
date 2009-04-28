@@ -85,8 +85,8 @@ class QuotePlugin < Plugin
 
         quotes.compact.each{ |q|
           node = REXML::Element.new("quote")
-          node.add_attributes({"date" => q.date, 
-                                 "id" => q.num, 
+          node.add_attributes({"date" => q.date,
+                                 "id" => q.num,
                              "author" => q.source[0,q.source.index("!")]})
           node.add_text(q.quote.gsub(/[\x00-\x1f]/, ''))
           quoteList.add_element(node)
@@ -135,14 +135,14 @@ class QuotePlugin < Plugin
       begin
         filePath = "#{destDir}/#{channel.delete("#")}.html"
         outF = File.new(filePath, "w")
-        
+
         headerSubs = { "%%channel%%" => channel }
 
         headerLines.each { |line|
           headerSubs.each { |pattern, value| line = line.gsub(pattern, value) }
           outF.puts line
         }
-        
+
         quotes.compact.each{ |q|
           bodySubs = { "%%timestamp%%" => q.date.to_s,
                               "%%id%%" => CGI.escapeHTML(q.num.to_s),

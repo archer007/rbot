@@ -6,11 +6,11 @@
 # Copyright:: (C) 2008 David Gadling
 # License:: BSD
 #
-# Submit acronym expansions and vote on the best!  
+# Submit acronym expansions and vote on the best!
 #
 # FIXME: Currently only works in one channel at a time since people /msg the
 # bot with suggestions and votes. Not sure how to get around that, if at all
-# 
+#
 
 # Control codes
 Norm = "\002\00302"
@@ -48,8 +48,8 @@ class AcroPlugin < Plugin
     Config.register Config::IntegerValue.new('acro.warning_time',
         :default => 10,
         :desc => "How many seconds before a warning")
-                                            
-        
+
+
     def initialize()
         super
         @answers = Hash.new
@@ -132,12 +132,12 @@ class AcroPlugin < Plugin
         @len = min + rand(max - min)
         1.upto(@len) do |n|
             nextLetter = sprintf("%c", 65+rand(26))
-            
+
             redo if @bot.config['acro.forbidden_letters'].include?(nextLetter)
-            
+
             # 90% chance of picking a new letter if a bad letter was chosen
             if @bot.config['acro.bad_letters'].include?(nextLetter) and rand(101) > 10
-                nextLetter = sprintf("%c", 65+rand(26)) 
+                nextLetter = sprintf("%c", 65+rand(26))
             end
             @acro += nextLetter
         end
@@ -181,7 +181,7 @@ class AcroPlugin < Plugin
         @bot.say(@channel, "#{Norm}Vote for one of the following and send it to "+
              "me via #{Hi}/msg #{@bot.nick} vote <Number>")
 
-        @answers.each { |k,v| 
+        @answers.each { |k,v|
             @ballot.push({:candidate=>k, :votes=>0, :submitter=>v})
         }
         1.upto(@ballot.length) { |n|
@@ -203,7 +203,7 @@ class AcroPlugin < Plugin
         @bot.say(@channel, "#{Norm}Thanks for voting, let's look at the results!")
 
         # Score =
-        # Number of votes + 
+        # Number of votes +
         # (First answer + less than 25 points = + 2 speed points)
         # (Most votes = + <Acronym length> bonus points)
 
@@ -216,7 +216,7 @@ class AcroPlugin < Plugin
             user[:submissions] = user.fetch(:submissions, 0) + 1
             user[:totalPoints] = user.fetch(:totalPoints, 0) + n[:votes]
             @bot.say(@channel, "#{Hi}#{n[:submitter]}#{Clear}#{Norm}'s answer of " +
-                         "#{Hi}#{n[:candidate]}#{Clear}#{Norm} received " + 
+                         "#{Hi}#{n[:candidate]}#{Clear}#{Norm} received " +
                          "#{Hi}#{n[:votes]}#{Clear}#{Norm} votes")
             if n[:votes] > winningVotes
                 winner = n[:submitter]

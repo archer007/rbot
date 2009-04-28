@@ -10,7 +10,7 @@
 # Automatically try to auth to AuthServ when connected
 
 class AuthServPlugin < Plugin
-  
+
   Config.register Config::StringValue.new('authserv.name',
     :default => "authserv",
     :desc => _("Name of the auth server"))
@@ -55,11 +55,11 @@ class AuthServPlugin < Plugin
     pass     = @bot.config['authserv.passwd']
     @bot.say authServ, "#{command} #{pass}"
   end
-  
+
   def connect
     do_auth(nil,nil)
   end
-  
+
   def notice(m)
     return if m.sourcenick.downcase != @bot.config['authserv.reply_from'].downcase
 

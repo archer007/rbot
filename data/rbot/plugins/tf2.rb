@@ -72,7 +72,7 @@ class TF2Plugin < Plugin
     #   byte showing response type, should be 'D'
     #   byte showing the number of players
     headerFormat = "iAc"
-    
+
     # Player format:
     #   byte showing the index [0..num players] for this player
     #   string showing player's name
@@ -106,8 +106,8 @@ class TF2Plugin < Plugin
     }
     if playerInfo.length > 0
       toReport = []
-      playerInfo.each_index { |i| 
-        if i % 4 == 0 and playerInfo[i] != "" 
+      playerInfo.each_index { |i|
+        if i % 4 == 0 and playerInfo[i] != ""
           toReport.push(playerInfo[i])
         end
       };

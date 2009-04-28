@@ -8,7 +8,7 @@
 #
 # Leave a memo for another user; the bot will PM it to them, the next time they
 # see them, probably after some delay.
-# 
+#
 
 define_structure :Memo, :sender, :message, :date
 

@@ -645,9 +645,9 @@ class AzGamePlugin < Plugin
       end
       tmp = @registry[:players].to_hash
       sorted = tmp.sort { |a,b| b[1][targetKey] <=> a[1][targetKey] }
-  
+
       winnersLeft = 5
-  
+
       winners = []
       sorted.each do |player|
           winners << "#{player[0]} has #{player[1][targetKey]}"
