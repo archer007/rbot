@@ -226,6 +226,68 @@ class MarkovPlugin < Plugin
     @learning_thread.priority = -1
   end
 
+  def inspect(m, params)
+    input = clean_str(params[:input].to_s)
+    input.downcase!
+    chain = input.split(/ /)
+    if chain.size == 2
+      m.reply("'#{segment}' has the default (%{p}%) chance of showing up" % { :p => probability? })
+      return
+    end
+    chain.push(MARKER.to_s)
+
+    output = "%{a} %{b}" % {:a => chain[0], :b => chain[1]}
+    broken = false
+    prob = 1.0
+
+    word1 = chain.shift
+    debug "shifted off one, chain = #{chain}"
+    word2 = chain.shift
+    debug "shifted off one, chain = #{chain}"
+    segment = "#{word1} #{word2}"
+
+    chain.size.times do
+      word3 = chain.shift
+      debug "shifted off one, chain = #{chain}"
+      break if word3.intern == MARKER
+
+      segment = "#{word1} #{word2}"
+      if @chains.key?(segment) == false
+        debug "Didn't find '#{segment}' in the chains"
+        broken = true
+        break
+      end
+
+      wordlist = @chains[segment]
+      total = wordlist.first
+      hash = wordlist.last
+      if total == 0
+        debug "'#{input}' has no children"
+        broken = true
+        break
+      end
+
+      if hash.has_key?(word3.intern) == false
+      debug "'#{segment}' doesn't have '#{word3.intern}', has #{hash.keys().inspect()}"
+        broken = true
+        break
+      end
+
+      word3Prob = hash[word3.intern]/total.to_f
+      prob *= word3Prob
+      output << sprintf(" %s (%.1f%%)", word3, word3Prob*100)
+
+      word1, word2 = word2, word3
+    end
+
+    if broken
+      m.reply("(4) '#{input}' should never occur")
+    else
+      output << sprintf("] out of [%s] = %.3f%%", input.split(/ /)[0,2].join(" "), prob*100)
+      m.reply("The odds of getting [#{output}")
+    end
+  end
+
   def cleanup
     if @upgrade_thread and @upgrade_thread.alive?
       debug 'closing conversion thread'
@@ -613,6 +675,7 @@ plugin.map 'markov learn from :file [:testing [:lines lines]] [using pattern *pa
            :requirements => {
              :testing => /^testing$/,
              :lines   => /^(?:\d+\.\.\d+|\d+)$/ }
+plugin.map 'markov inspect *input', :action => "inspect"
 
 plugin.default_auth('ignore', false)
 plugin.default_auth('probability', false)
