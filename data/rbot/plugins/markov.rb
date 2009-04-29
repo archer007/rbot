@@ -226,6 +226,21 @@ class MarkovPlugin < Plugin
     @learning_thread.priority = -1
   end
 
+  def forget(m, params)
+    input = clean_str(params[:input].to_s).downcase
+    key = input.split(/ /)[0,2].join(" ")
+
+    if @chains.key?(key) == false
+      m.reply("I don't have any chains that start with '#{key}'")
+      return
+    end
+
+    @chains_mutex.synchronize do
+      @chains.delete(key)
+    end
+    m.okay
+  end
+
   def inspect(m, params)
     input = clean_str(params[:input].to_s)
     input.downcase!
@@ -400,6 +415,8 @@ class MarkovPlugin < Plugin
       "markov status => show if markov is enabled, probability and amount of messages in queue for learning"
     when "probability"
       "markov probability [<percent>] => set the % chance of rbot responding to input, or display the current probability"
+    when "forget"
+      "markov forget <word1> <word2> => Find the link for <word1> <word2> and delete it, if it exists"
     when "chat"
       case subtopic
       when "about"
@@ -676,8 +693,10 @@ plugin.map 'markov learn from :file [:testing [:lines lines]] [using pattern *pa
              :testing => /^testing$/,
              :lines   => /^(?:\d+\.\.\d+|\d+)$/ }
 plugin.map 'markov inspect *input', :action => "inspect"
+plugin.map 'markov forget *input', :action => "forget", :auth_path => '!markov::forget!'
 
 plugin.default_auth('ignore', false)
 plugin.default_auth('probability', false)
 plugin.default_auth('learn', false)
+plugin.default_auth('forget', false)
 
