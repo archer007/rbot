@@ -384,5 +384,3 @@ plugin.map 'translate [:from] [:to] *phrase',
            :action => :cmd_translator, :thread => true, :requirements => req
 plugin.map 'translator [:from] [:to] *phrase',
            :action => :cmd_translator, :thread => true, :requirements => req
-plugin.map 'translator [:from] [:to] *phrase',
-           :action => :cmd_translator, :thread => true
