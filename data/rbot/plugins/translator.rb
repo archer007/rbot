@@ -378,9 +378,14 @@ class TranslatorPlugin < Plugin
 end
 
 plugin = TranslatorPlugin.new
+<<<<<<< HEAD:data/rbot/plugins/translator.rb
 req = Hash[*%w(from to).map { |e| [e.to_sym, /#{plugin.languages.join("|")}/] }.flatten]
 
 plugin.map 'translate [:from] [:to] *phrase',
            :action => :cmd_translator, :thread => true, :requirements => req
 plugin.map 'translator [:from] [:to] *phrase',
            :action => :cmd_translator, :thread => true, :requirements => req
+=======
+plugin.map 'translator :from [:to] *phrase',
+           :action => :cmd_translator, :thread => true
+>>>>>>> translator: make destination language optional:data/rbot/plugins/translator.rb
