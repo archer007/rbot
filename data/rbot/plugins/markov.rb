@@ -28,6 +28,10 @@ class MarkovPlugin < Plugin
     :default => 0.5,
     :validate => Proc.new { |v| v >= 0 },
     :desc => "Time the learning thread spends sleeping after learning a line. If set to zero, learning from files can be very CPU intensive, but also faster.")
+  Config.register Config::IntegerValue.new('markov.chatabout_delay',
+    :default => 3,
+    :desc => "Minimum time (in seconds) between 'chat about' commands, 0 disables",
+    :on_change => Proc.new { |bot, v| bot.plugins['markov'].reset_timer })
 
   MARKER = :"\r\n"
 
@@ -208,6 +212,8 @@ class MarkovPlugin < Plugin
       @bot.config.delete('markov.ignore_users'.to_sym)
     end
 
+    reset_timer
+
     @chains = @registry.sub_registry('v2')
     @chains.set_default([])
     @chains_mutex = Mutex.new
@@ -239,6 +245,10 @@ class MarkovPlugin < Plugin
       @chains.delete(key)
     end
     m.okay
+  end
+
+  def reset_timer
+    @lastChatAbout = Time.new - @bot.config['markov.chatabout_delay']
   end
 
   def inspect(m, params)
@@ -540,15 +550,18 @@ class MarkovPlugin < Plugin
   end
 
   def chat(m, params)
+    return if (Time.new - @lastChatAbout).to_i < @bot.config['markov.chatabout_delay'] 
     line = generate_string(params[:seed1], params[:seed2])
     if line and line != [params[:seed1], params[:seed2]].compact.join(" ")
       m.reply line
     else
       m.reply _("I can't :(")
     end
+    @lastChatAbout = Time.new()
   end
 
   def rand_chat(m, params)
+    return if (Time.new - @lastChatAbout).to_i < @bot.config['markov.chatabout_delay'] 
     # pick a random pair from the db and go from there
     word1, word2 = MARKER, MARKER
     output = Array.new
@@ -563,6 +576,7 @@ class MarkovPlugin < Plugin
     else
       m.reply _("I can't :(")
     end
+    @lastChatAbout = Time.new()
   end
 
   def learn(*lines)
