@@ -195,17 +195,17 @@ class GeoIpPlugin < Plugin
       :country => geo[:country]
     }
 
-    res << " %{city}," % {
+    res << " %{city}" % {
       :city => geo[:city]
     } unless geo[:city].to_s.empty?
+
+    res << " %{region}," % {
+      :region  => geo[:region]
+    } unless geo[:region].to_s.empty? || geo[:region] == geo[:city]
 
     res << " %{country}" % {
       :country => geo[:country]
     }
-
-    res << " (%{region})" % {
-      :region  => geo[:region]
-    } unless geo[:region].to_s.empty? || geo[:region] == geo[:city]
 
     return res
   end
