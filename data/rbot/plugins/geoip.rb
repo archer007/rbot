@@ -55,7 +55,7 @@ module ::GeoIP
       newobj = {
         :country => obj.elements["Response"].elements["CountryName"].text,
         :city => obj.elements["Response"].elements["City"].text,
-        :region => obj.elements["Response"].elements["RegionCode"].text,
+        :region => obj.elements["Response"].elements["RegionName"].text,
       }
       debug "Returning #{newobj}"
       return newobj
