@@ -28,6 +28,10 @@ class MarkovPlugin < Plugin
     :default => 0.5,
     :validate => Proc.new { |v| v >= 0 },
     :desc => "Time the learning thread spends sleeping after learning a line. If set to zero, learning from files can be very CPU intensive, but also faster.")
+  Config.register Config::IntegerValue.new('markov.chatabout_delay',
+    :default => 3,
+    :desc => "Minimum time (in seconds) between 'chat about' commands, 0 disables",
+    :on_change => Proc.new { |bot, v| bot.plugins['markov'].reset_timer })
 
   MARKER = :"\r\n"
 
@@ -208,6 +212,8 @@ class MarkovPlugin < Plugin
       @bot.config.delete('markov.ignore_users'.to_sym)
     end
 
+    reset_timer
+
     @chains = @registry.sub_registry('v2')
     @chains.set_default([])
     @chains_mutex = Mutex.new
@@ -224,6 +230,87 @@ class MarkovPlugin < Plugin
       end
     end
     @learning_thread.priority = -1
+  end
+
+  def forget(m, params)
+    input = clean_str(params[:input].to_s).downcase
+    key = input.split(/ /)[0,2].join(" ")
+
+    if @chains.key?(key) == false
+      m.reply("I don't have any chains that start with '#{key}'")
+      return
+    end
+
+    @chains_mutex.synchronize do
+      @chains.delete(key)
+    end
+    m.okay
+  end
+
+  def reset_timer
+    @lastChatAbout = Time.new - @bot.config['markov.chatabout_delay']
+  end
+
+  def inspect(m, params)
+    input = clean_str(params[:input].to_s)
+    input.downcase!
+    chain = input.split(/ /)
+    if chain.size == 2
+      m.reply("'#{segment}' has the default (%{p}%) chance of showing up" % { :p => probability? })
+      return
+    end
+    chain.push(MARKER.to_s)
+
+    output = "%{a} %{b}" % {:a => chain[0], :b => chain[1]}
+    broken = false
+    prob = 1.0
+
+    word1 = chain.shift
+    debug "shifted off one, chain = #{chain}"
+    word2 = chain.shift
+    debug "shifted off one, chain = #{chain}"
+    segment = "#{word1} #{word2}"
+
+    chain.size.times do
+      word3 = chain.shift
+      debug "shifted off one, chain = #{chain}"
+      break if word3.intern == MARKER
+
+      segment = "#{word1} #{word2}"
+      if @chains.key?(segment) == false
+        debug "Didn't find '#{segment}' in the chains"
+        broken = true
+        break
+      end
+
+      wordlist = @chains[segment]
+      total = wordlist.first
+      hash = wordlist.last
+      if total == 0
+        debug "'#{input}' has no children"
+        broken = true
+        break
+      end
+
+      if hash.has_key?(word3.intern) == false
+      debug "'#{segment}' doesn't have '#{word3.intern}', has #{hash.keys().inspect()}"
+        broken = true
+        break
+      end
+
+      word3Prob = hash[word3.intern]/total.to_f
+      prob *= word3Prob
+      output << sprintf(" %s (%.1f%%)", word3, word3Prob*100)
+
+      word1, word2 = word2, word3
+    end
+
+    if broken
+      m.reply("(4) '#{input}' should never occur")
+    else
+      output << sprintf("] out of [%s] = %.3f%%", input.split(/ /)[0,2].join(" "), prob*100)
+      m.reply("The odds of getting [#{output}")
+    end
   end
 
   def cleanup
@@ -338,6 +425,8 @@ class MarkovPlugin < Plugin
       "markov status => show if markov is enabled, probability and amount of messages in queue for learning"
     when "probability"
       "markov probability [<percent>] => set the % chance of rbot responding to input, or display the current probability"
+    when "forget"
+      "markov forget <word1> <word2> => Find the link for <word1> <word2> and delete it, if it exists"
     when "chat"
       case subtopic
       when "about"
@@ -461,15 +550,18 @@ class MarkovPlugin < Plugin
   end
 
   def chat(m, params)
+    return if (Time.new - @lastChatAbout).to_i < @bot.config['markov.chatabout_delay'] 
     line = generate_string(params[:seed1], params[:seed2])
     if line and line != [params[:seed1], params[:seed2]].compact.join(" ")
       m.reply line
     else
       m.reply _("I can't :(")
     end
+    @lastChatAbout = Time.new()
   end
 
   def rand_chat(m, params)
+    return if (Time.new - @lastChatAbout).to_i < @bot.config['markov.chatabout_delay'] 
     # pick a random pair from the db and go from there
     word1, word2 = MARKER, MARKER
     output = Array.new
@@ -484,6 +576,7 @@ class MarkovPlugin < Plugin
     else
       m.reply _("I can't :(")
     end
+    @lastChatAbout = Time.new()
   end
 
   def learn(*lines)
@@ -613,8 +706,11 @@ plugin.map 'markov learn from :file [:testing [:lines lines]] [using pattern *pa
            :requirements => {
              :testing => /^testing$/,
              :lines   => /^(?:\d+\.\.\d+|\d+)$/ }
+plugin.map 'markov inspect *input', :action => "inspect"
+plugin.map 'markov forget *input', :action => "forget", :auth_path => '!markov::forget!'
 
 plugin.default_auth('ignore', false)
 plugin.default_auth('probability', false)
 plugin.default_auth('learn', false)
+plugin.default_auth('forget', false)
 
