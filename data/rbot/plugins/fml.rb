@@ -23,33 +23,29 @@ class FMLPlugin < Plugin
   end
 
   def fml(m, params)
-    if params.key? :id
-      id = params[:id]
-    else
-      id = "random"
-    end
+    id = params[:id]
 
     url = "http://api.betacie.com/view/%{id}/nocomment?key=readonly&language=en" % {:id => id}
     xml = @bot.httputil.get(url)
 
     unless xml
-      m.reply "XML parse failed. FML."
+      m.reply "Today, XML fetch failed. FML."
       return
     end
     doc = Document.new xml
     unless doc
-      m.reply "XML parse failed. FML."
+      m.reply "Today, XML parse failed. FML."
       return
     end
     root = doc.elements['root'].elements['items'][0]
-    text = root.elements['text'].text
-    id = root.attributes['id']
-    agree = root.elements['agree'].text
-    deserved = root.elements['deserved'].text
-    reply = "%{text} %{bold}%{id}%{bold} %{green}%{agree} %{red}%{deserved}" % {
-      :text => text, :id => id, :agree => agree, :deserved => deserved, 
-      :bold => Bold, :green => Irc.color(:green), :red => Irc.color(:red)
+    data = {
+        :text => root.elements['text'].text,
+        :id => root.attributes['id'],
+        :agree => root.elements['agree'].text,
+        :deserved => root.elements['deserved'].text,
+        :bold => Bold, :green => Irc.color(:green), :red => Irc.color(:red),
     }
+    reply = "%{text} %{bold}%{id}%{bold} %{green}%{agree} %{red}%{deserved}" % data
     m.reply reply
   end
 end
