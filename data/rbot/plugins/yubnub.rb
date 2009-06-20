@@ -12,22 +12,21 @@
 class YubNubPlugin < Plugin
   
   def run_yubnub_command(m, params)
-	m.reply("http://yubnub.org/parser/parse?command=" + params[:yarg])
+	#y_string = ""
+	
+	#params.each do |p|
+	#	y_string = y_string + p + " "
+	#end+ params[:yarg] + 
+	
+	m.reply("http://yubnub.org/parser/parse?command=" + params[*rest])
+	
   end
 
   def help(plugin, topic="")
-    case topic
-    when 'tf2'
-      return _("tf2 <server> => return map name and number of players on the given server")
-    when 'servers'
-      return _("servers => same as saying !tf2 <server1> !tf2 <server2>...")
-    when 'players'
-      return _("players <server> => returns a list of players on server")
-    end
-    return _("tf2 topics: tf2, servers, players")
+	
   end
 
 end
 
 plugin = YubNubPlugin.new
-plugin.map 'y :yarg', :action=>'run_yubnub_command'
+plugin.map 'y :yarg *rest', :action=>'run_yubnub_command'
